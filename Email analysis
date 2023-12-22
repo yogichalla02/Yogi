@@ -1,0 +1,33 @@
+import email
+from email.parser import BytesParser
+
+def analyze_email(file_path):
+    try:
+        with open(file_path, 'rb') as file:
+            # Parse the email
+            msg = BytesParser().parse(file)
+
+            # Display basic information
+            print(f"Subject: {msg['Subject']}")
+            print(f"From: {msg['From']}")
+            print(f"To: {msg['To']}")
+            print(f"Date: {msg['Date']}")
+
+            # Display email headers
+            print("\n--- Email Headers ---")
+            for header, value in msg.items():
+                print(f"{header}: {value}")
+
+            # Display message body
+            print("\n--- Email Body ---")
+            print(msg.get_payload())
+
+    except Exception as e:
+        print(f"Error analyzing email: {str(e)}")
+
+def main():
+    file_path = input("Enter the path to the email file: ")
+    analyze_email(file_path)
+
+if __name__ == "__main__":
+    main()
