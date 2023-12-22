@@ -1,0 +1,34 @@
+import scapy.all as scapy
+
+def scan(ip, scan_type):
+    try:
+        if scan_type == "icmp":
+            # ICMP (Ping) Scan
+            packet = scapy.IP(dst=ip) / scapy.ICMP()
+            response = scapy.sr1(packet, timeout=1, verbose=False)
+            if response:
+                print(f"Host {ip} is up (ICMP scan).")
+
+        elif scan_type == "tcp":
+            # TCP SYN Scan
+            for port in range(1, 1025):  # Scan common ports
+                packet = scapy.IP(dst=ip) / scapy.TCP(port=port, flags="S")
+                response = scapy.sr1(packet, timeout=1, verbose=False)
+                if response and response.haslayer(scapy.TCP) and response[scapy.TCP].flags == 0x12:
+                    print(f"Port {port} on host {ip} is open (TCP SYN scan).")
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+def main():
+    target_ip = input("Enter target IP address: ")
+    scan_type = input("Choose scan type (icmp/tcp): ")
+
+    if scan_type.lower() not in ["icmp", "tcp"]:
+        print("Invalid scan type. Please choose 'icmp' or 'tcp'.")
+        return
+
+    scan(target_ip, scan_type.lower())
+
+if __name__ == "__main__":
+    main()
