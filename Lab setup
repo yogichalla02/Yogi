@@ -1,0 +1,89 @@
+from pyVim import connect
+from pyVmomi import vim
+import ssl
+
+def connect_to_vcenter(vcenter_ip, username, password):
+    try:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        context.verify_mode = ssl.CERT_NONE
+        service_instance = connect.SmartConnect(host=vcenter_ip, user=username, pwd=password, sslContext=context)
+        return service_instance
+    except Exception as e:
+        print(f"Error connecting to vCenter: {str(e)}")
+        return None
+
+def create_vm(si, vm_name, datacenter_name, cluster_name, datastore_name, network_name, template_name):
+    try:
+        content = si.RetrieveContent()
+
+        # Find datacenter
+        datacenter = None
+        for dc in content.rootFolder.childEntity:
+            if dc.name == datacenter_name:
+                datacenter = dc
+                break
+
+        # Find cluster
+        cluster = None
+        for c in datacenter.hostFolder.childEntity:
+            if c.name == cluster_name:
+                cluster = c
+                break
+
+        # Find datastore
+        datastore = None
+        for ds in datacenter.datastoreFolder.childEntity:
+            if ds.name == datastore_name:
+                datastore = ds
+                break
+
+        # Find network
+        network = None
+        for net in datacenter.networkFolder.childEntity:
+            if net.name == network_name:
+                network = net
+                break
+
+        # Find VM template
+        template_vm = None
+        for vm in cluster.vmFolder.childEntity:
+            if vm.name == template_name:
+                template_vm = vm
+                break
+
+        # Clone VM from template
+        relocate_spec = vim.vm.RelocateSpec(datastore=datastore)
+        clone_spec = vim.vm.CloneSpec(powerOn=False, template=False, location=relocate_spec)
+        task = template_vm.Clone(folder=cluster.vmFolder, name=vm_name, spec=clone_spec)
+
+        # Wait for the task to complete
+        while task.info.state not in [vim.TaskInfo.State.success, vim.TaskInfo.State.error]:
+            pass
+
+        if task.info.state == vim.TaskInfo.State.success:
+            print(f"VM '{vm_name}' created successfully.")
+        else:
+            print(f"Error creating VM '{vm_name}': {task.info.error.msg}")
+
+    except Exception as e:
+        print(f"Error creating VM: {str(e)}")
+
+def main():
+    vcenter_ip = 'your_vcenter_ip'
+    username = 'your_username'
+    password = 'your_password'
+    vm_name = 'test_vm'
+    datacenter_name = 'your_datacenter'
+    cluster_name = 'your_cluster'
+    datastore_name = 'your_datastore'
+    network_name = 'your_network'
+    template_name = 'your_template_vm'
+
+    si = connect_to_vcenter(vcenter_ip, username, password)
+
+    if si:
+        create_vm(si, vm_name, datacenter_name, cluster_name, datastore_name, network_name, template_name)
+        connect.Disconnect(si)
+
+if __name__ == "__main__":
+    main()
